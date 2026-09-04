@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSPECTOR
+  REVIEWER
+}
+
+enum InspectionStatus {
+  CREATED
+  PROCESSING
+  COMPLETED
+  NEEDS_REVIEW
+  FAILED
+  CANCELLED
+}
+
+enum ImageType {
+  FRONT
+  BACK
+  SIDE
+  LABEL
+  OTHER
+}
+
+enum DeclarationType {
+  PRODUCT_NAME
+  NET_QUANTITY
+  MRP
+  MANUFACTURER
+  PACKER
+  IMPORTER
+  COUNTRY_OF_ORIGIN
+  DATE_OF_MANUFACTURE
+  BEST_BEFORE
+  CONSUMER_CARE
+  OTHER
+}
+
+enum ComplianceOverallStatus {
+  PASS
+  FAIL
+  WARNING
+  MANUAL_REVIEW
+}
+
+enum ComplianceCheckStatus {
+  PASS
+  FAIL
+  WARNING
+  MANUAL_REVIEW
+  NOT_DETECTED
+}
+
+enum ViolationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ViolationStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+}
+
+enum ReportType {
+  PDF
+  EDITABLE
+}
+
+model User {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  email       String       @unique
+  passwordHash String?
+  role        Role         @default(INSPECTOR)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  inspections Inspection[] @relation("InspectorInspections")
+  reports     Report[]     @relation("GeneratedReports")
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model Product {
+  id               String       @id @default(uuid()) @db.Uuid
+  productName      String
+  brandName        String?
+  manufacturerName String?
+  category         String?
+  barcode          String?
+  batchNumber      String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  inspections      Inspection[]
+
+  @@index([productName])
+  @@index([barcode])
+  @@index([batchNumber])
+}
+
+model Inspection {
+  id               String              @id @default(uuid()) @db.Uuid
+  inspectionNumber String              @unique
+  productId        String              @db.Uuid
+  inspectorId      String              @db.Uuid
+  status           InspectionStatus    @default(CREATED)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  product          Product             @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  inspector        User                @relation("InspectorInspections", fields: [inspectorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  images           ProductImage[]
+  declarations     ExtractedDeclaration[]
+  complianceResult ComplianceResult?
+  violations       Violation[]
+  evidence         Evidence[]
+  reports          Report[]
+
+  @@index([productId])
+  @@index([inspectorId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ProductImage {
+  id            String                 @id @default(uuid()) @db.Uuid
+  inspectionId  String                 @db.Uuid
+  fileName      String
+  filePath      String
+  mimeType      String
+  fileSize      Int
+  imageType     ImageType
+  createdAt     DateTime               @default(now())
+  inspection    Inspection             @relation(fields: [inspectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  declarations  ExtractedDeclaration[]
+  evidence      Evidence[]
+
+  @@index([inspectionId])
+  @@index([imageType])
+}
+
+model ExtractedDeclaration {
+  id              String        @id @default(uuid()) @db.Uuid
+  inspectionId    String        @db.Uuid
+  declarationType DeclarationType
+  extractedValue  String?
+  confidence      Float?
+  boundingBox     Json?
+  sourceImageId   String?       @db.Uuid
+  createdAt       DateTime      @default(now())
+  inspection      Inspection    @relation(fields: [inspectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sourceImage     ProductImage? @relation(fields: [sourceImageId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([inspectionId])
+  @@index([sourceImageId])
+  @@index([declarationType])
+}
+
+model ComplianceResult {
+  id            String                  @id @default(uuid()) @db.Uuid
+  inspectionId  String                  @unique @db.Uuid
+  overallStatus ComplianceOverallStatus
+  score         Float?
+  checkedAt     DateTime                @default(now())
+  engineVersion String?
+  inspection    Inspection              @relation(fields: [inspectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  checks        ComplianceCheck[]
+}
+
+model ComplianceCheck {
+  id                 String                @id @default(uuid()) @db.Uuid
+  complianceResultId String                @db.Uuid
+  ruleCode           String
+  ruleName           String
+  status             ComplianceCheckStatus
+  observedValue      String?
+  expectedValue      String?
+  legalReference     String?
+  explanation        String?
+  confidence         Float?
+  createdAt          DateTime              @default(now())
+  complianceResult   ComplianceResult     @relation(fields: [complianceResultId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  violations         Violation[]
+
+  @@index([complianceResultId])
+  @@index([ruleCode])
+  @@index([status])
+}
+
+model Violation {
+  id                String            @id @default(uuid()) @db.Uuid
+  inspectionId      String            @db.Uuid
+  complianceCheckId String?           @db.Uuid
+  severity          ViolationSeverity
+  title             String
+  description       String
+  status            ViolationStatus   @default(OPEN)
+  createdAt         DateTime          @default(now())
+  inspection        Inspection        @relation(fields: [inspectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  complianceCheck   ComplianceCheck?  @relation(fields: [complianceCheckId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  evidence          Evidence[]
+
+  @@index([inspectionId])
+  @@index([complianceCheckId])
+  @@index([severity])
+  @@index([status])
+}
+
+model Evidence {
+  id           String        @id @default(uuid()) @db.Uuid
+  inspectionId String        @db.Uuid
+  violationId  String?       @db.Uuid
+  imageId      String?       @db.Uuid
+  description  String?
+  createdAt    DateTime      @default(now())
+  inspection   Inspection    @relation(fields: [inspectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  violation    Violation?    @relation(fields: [violationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  image        ProductImage? @relation(fields: [imageId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([inspectionId])
+  @@index([violationId])
+  @@index([imageId])
+}
+
+model Report {
+  id           String     @id @default(uuid()) @db.Uuid
+  inspectionId String     @db.Uuid
+  reportType   ReportType
+  filePath     String?
+  generatedAt  DateTime   @default(now())
+  generatedBy  String     @db.Uuid
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  generator    User       @relation("GeneratedReports", fields: [generatedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([inspectionId])
+  @@index([generatedBy])
+  @@index([reportType])
+}
