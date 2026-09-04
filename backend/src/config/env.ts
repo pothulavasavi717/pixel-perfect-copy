@@ -12,4 +12,7 @@ export const env = {
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:8080",
   jwtSecret: process.env.JWT_SECRET ?? "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "1h",
+  uploadDir: process.env.UPLOAD_DIR ?? "uploads",
+  aiServiceUrl: process.env.AI_SERVICE_URL ?? "",
+  aiServiceTimeoutMs: Number.parseInt(process.env.AI_SERVICE_TIMEOUT_MS ?? "10000", 10),
 } as const;

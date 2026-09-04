@@ -7,26 +7,36 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Backend local files
+backend/uploads/
+backend/dist/
+backend/.env
+
+# Python
+ai-service/.venv/
+ai-service/**/__pycache__/
+.pytest_cache/
+*.pyc
+
+# Build output
 dist
 dist-ssr
 .output
 .vinxi
 .tanstack/**
 .nitro
+
+# Local configuration
 *.local
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?

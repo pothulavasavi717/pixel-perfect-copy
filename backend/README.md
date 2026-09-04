@@ -2,7 +2,8 @@
 
 Standalone Node.js, Express, TypeScript, PostgreSQL, and Prisma backend for
 LegalMetriCheck, with JWT authentication and role-based access control.
-OCR, AI, compliance rules, and reports remain deferred.
+The backend also includes a demo-ready inspection, observation extraction,
+deterministic compliance, evidence, and structured report workflow.
 
 ## Structure
 
@@ -101,3 +102,20 @@ npm start
 ```
 
 The health endpoint is independent of any future database connection.
+
+## Demo workflow
+
+Authenticated workflow endpoints include:
+
+- `POST/GET /api/v1/inspections`
+- `GET /api/v1/inspections/:id`
+- `POST/GET /api/v1/inspections/:inspectionId/images`
+- `POST /api/v1/inspections/:id/extract`
+- `POST/GET /api/v1/inspections/:id/compliance`
+- `POST/GET /api/v1/inspections/:id/evidence`
+- `POST/GET /api/v1/inspections/:id/report`
+- `POST/GET /api/v1/products`
+
+Image extraction produces observations only. Compliance is evaluated by
+deterministic backend rules and uses `MANUAL_REVIEW` when evidence is missing.
+Unverified legal references are marked `LEGAL_REFERENCE_TO_BE_CONFIGURED`.
