@@ -1,13 +1,16 @@
 # LegalMetriCheck API
 
-Standalone Node.js, Express, TypeScript, PostgreSQL, and Prisma backend
-foundation for LegalMetriCheck. Database models are included in this phase;
-authentication, OCR, AI, compliance rules, and reports remain deferred.
+Standalone Node.js, Express, TypeScript, PostgreSQL, and Prisma backend for
+LegalMetriCheck, with JWT authentication and role-based access control.
+OCR, AI, compliance rules, and reports remain deferred.
 
 ## Structure
 
 - `src/config` — environment configuration
 - `src/config/prisma.ts` — reusable Prisma client
+- `src/middleware/auth.ts` — JWT authentication and active-user checks
+- `src/middleware/authorize.ts` — role-based authorization
+- `src/services/auth.service.ts` — password and token business logic
 - `src/controllers` — HTTP handlers
 - `src/middleware` — security, logging, and error handling
 - `src/routes` — API route definitions
@@ -33,6 +36,31 @@ npm run prisma:studio
 The schema stores OCR/AI observations as extracted declarations separately
 from future compliance results and checks. No seed data or legal rules are
 included.
+
+## Authentication
+
+Authentication uses bcrypt password hashes and JWTs. Public registration
+always assigns the `INSPECTOR` role; clients cannot select `ADMIN` or elevate
+their privileges. Password hashes are never returned.
+
+Endpoints:
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `GET /api/v1/auth/admin/test`
+- `GET /api/v1/auth/inspector/test`
+- `GET /api/v1/auth/reviewer/test`
+
+Send access tokens using:
+
+```text
+Authorization: Bearer <token>
+```
+
+Unauthenticated requests receive `401`. Authenticated users without the
+required role receive `403`. `JWT_SECRET` and `JWT_EXPIRES_IN` are configured
+through the environment; never commit `.env` or real secrets.
 
 ## Setup
 
